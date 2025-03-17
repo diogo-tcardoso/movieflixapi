@@ -41,11 +41,41 @@ app.post ("/movies", async (req, res) => {
                 release_date: new Date(release_date)
             }
         });
-    } catch{
+    } catch {
         res.status(500).send({message: "Falha ao cadastrar o filme."});
+        return;
     }
 
     res.status(201).send();
+});
+
+app.put ("/movies/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    try{
+        const data = {...req.body};
+        data.release_date = data.release_date ? new Date(data.release_date) : undefined;
+
+        const movie = await prisma.movie.findUnique({
+            where: { id }
+        });
+    
+        if (!movie){
+            res.status(404).send({message: "Movie not found"});
+        }
+
+        await prisma.movie.update({
+            where: {
+                id: id,
+            },
+            data: data
+        });
+    } catch {
+        res.status(500).send({message: "Error while updating the movie."});
+        return;
+    }
+
+    res.status(200).send();
 });
 
 app.listen(port, () => {
