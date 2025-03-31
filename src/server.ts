@@ -24,7 +24,7 @@ app.get("/movies", async (req, res) => {
 });
 
 app.post ("/movies", async (req, res) => {
-    const { title, genre_id, language_id, oscar_count, release_date } = req.body;
+    const { title, genre_id, language_id, oscar_count, release_date, duration } = req.body;
 
     try {
         const movieWithSameTitle = await prisma.movie.findFirst({
@@ -41,7 +41,8 @@ app.post ("/movies", async (req, res) => {
                 genre_id: genre_id,
                 language_id: language_id,
                 oscar_count: oscar_count,
-                release_date: new Date(release_date)
+                release_date: new Date(release_date),
+                duration: duration
             }
         });
     } catch {
@@ -124,7 +125,7 @@ app.get ("/movies/:genreName", async (req, res) => {
     }
 });
 
-//! Exercício DevQuest 1
+//! Exercício DevQuest 1 - Endpoint para Atualizar Informação do Gênero
 app.put("/genres/:id", async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
@@ -162,6 +163,71 @@ app.put("/genres/:id", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).send({ message: "Houve um problema ao atualizar o gênero." });
+    }
+});
+
+//! Exercício DevQuest 2 - Endpoint para Criar Novo Gênero
+app.post ("/genre", async (req, res) => {
+    const { genre } = req.body;
+
+    if(!genre) {
+        res.status(400).send({ message: "O nome do gênero é obrigatório." });
+    }
+
+    try {
+        const existingGenre = await prisma.genre.findFirst({
+            where: { 
+                name: { equals: genre.name, mode: "insensitive" } 
+            },
+        });
+
+        if(existingGenre){
+            res.status(409).send({ message: "Este nome de gênero já existe." });
+        }
+
+        const createdGenre = await prisma.genre.create({
+            data: genre,
+        });
+
+        res.status(201).json(createdGenre);
+    } catch {
+        res.status(500).send({ message: "Houve um problema ao cadastrar o gênero." });
+    }
+});
+
+//! Exercício 3 DevQuest - Endpoint para Listar Todos os Gêneros
+app.get ("/genres", async (req, res) => {
+    try {
+        const genres = await prisma.genre.findMany({
+            orderBy: {
+                name: "asc"
+            }
+        });
+        res.status(200).json(genres);
+    } catch {
+        res.status(500).send({ message: "Houve um problema ao buscar os gêneros." });
+    }
+});
+
+//! Exercício 4 DevQuest - Endpoint para Remover um Gênero
+app.delete ("/genres/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const genre = await prisma.genre.findUnique({
+            where: { id: Number(id) },
+        });
+
+        if (!genre) {
+            res.status(404).send({ message: "Gênero não encontrado." });
+        }
+
+        await prisma.genre.delete({ where: { id: Number(id) }});
+
+        res.status(200).send();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Houve um problema ao remover o gênero." });
     }
 });
 
