@@ -1,5 +1,5 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "../swagger.json";
 
@@ -11,16 +11,64 @@ app.use(express.json());
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get("/movies", async (req, res) => {
-    const movies = await prisma.movie.findMany({
-        orderBy: {
-            title: "asc"
-        },
-        include: {
-            genres: true,
-            languages: true
+    try {
+        const movies = await prisma.movie.findMany({
+            orderBy: {
+                title: "asc"
+            },
+            include: {
+                genres: true,
+                languages: true
+            }
+        });
+        //! Exercício DevQuest 5 - Cálculo da Quantidade de Filmes e Média de Duração
+        const totalMovies = movies.length;
+
+        let totalDuration = 0;
+        for (const movie of movies){
+            totalDuration += movie.duration;
         }
-    });
-    res.json(movies);
+        const averageDuration = totalDuration / totalMovies;
+        res.json({
+            movies,
+            totalMovies,
+            averageDuration
+        });
+    } catch {
+        res.status(500).send({message: "Falha ao buscar filmes."});
+        return;
+    }
+});
+
+//! Exercício 6 DevQuest - Endpoint de Listagem de Filmes com Ordenação para Diversos Critérios
+app.get("/movies/sort", async (req, res) => {
+    const { sort } = req.query;
+    console.log(sort);
+    let orderBy: Prisma.MovieOrderByWithRelationInput | Prisma.MovieOrderByWithRelationInput[] | undefined;
+    if (sort === "title") {
+        orderBy = {
+            title: "asc",
+        };
+    } else if (sort === "release_date") {
+        orderBy = {
+            release_date: "asc",
+        };
+    }
+
+    try {
+        const movies = await prisma.movie.findMany({
+            orderBy,
+            include: {
+                genres: true,
+                languages: true,
+            },
+        });
+
+        res.json(movies);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Houve um problema ao buscar os filmes." });
+    }
 });
 
 app.post ("/movies", async (req, res) => {
